@@ -1,0 +1,26 @@
+config NO_BROWNOUT
+	bool "Disable brownout support"
+	default y
+
+config BROWNOUT_THR_VBAT
+        int "VBAT brownout threshold"
+        default 0
+        help
+            Controls the VBAT brownout threshold for the non-lithium ion battery type.
+            For battery level <= 1.8V,
+                VBAT threshold = 0.9 + 0.025X, where 0 <= X <= 31
+            For battery level > 1.8V,
+                VBAT threshold = 1.4 + 0.05X, where
+                    0 <= X <= 31, for non-rechargeable battery type
+                    0 <= X <= 17, for rechargeable battery type
+            The battery level is specified through OTP and is equal to BATT_LEVEL_GT_1P8V by default. It can be overwritten through CONFIG_BATT_LEVEL. Refer to the PMU configuration for additional details.
+
+config BROWNOUT_STACK_SIZE
+        int "Brownout thread stack size"
+        default 1024
+
+config BROWNOUT_THREAD_PRIORITY
+        int "Brownout thread priority"
+        default 10
+        help
+            The thread priority should be lower (higher number) than the application thread priority.
