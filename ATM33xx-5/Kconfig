@@ -2,7 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+if SOC_ATM33xx_5
+
 rsource "drivers/Kconfig"
+rsource "lib/Kconfig"
 
 if TRUSTED_EXECUTION_SECURE
 
@@ -12,3 +15,5 @@ config PLATFORM_SPECIFIC_INIT
 	default y
 
 endif # TRUSTED_EXECUTION_SECURE
+
+endif # SOC_ATM33xx_5

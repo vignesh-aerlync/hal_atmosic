@@ -2,118 +2,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# Battery configuration
-config BATT_TYPE
-	int "Battery type"
-	default 3
-	help
-	    The battery type is specified through OTP and is equal to BATT_TYPE_NON_RECHARGEABLE by default. It can be overwritten through this compile time flag based on the board design. Valid battery types:
-	    0 => BATT_TYPE_LI_ION
-	    1 => BATT_TYPE_RECHARGEABLE
-	    2 => BATT_TYPE_NO_BATTERY
-	    3 => BATT_TYPE_NON_RECHARGEABLE
-	    If you wish to use BATT_TYPE_LI_ION, you will need to first power the board using a power source that is NOT lithium ion then load a program with CONFIG_BATT_TYPE=0. This will enable the lithium ion power ciruit, at which point you can disconnect the non lithium ion power source, hook up the lithium ion battery and proceed like normal.
+config ATM_PMU
+	bool "Atmosic Power Management Unit module"
+	default y if ADC
+	default y if BT
+	default y if ENTROPY_ATM_TRNG
+	default y if PM
 
-config VDDIO_TYPE
-	int "VDDIO type"
+config PMU_WDOG_TIMEOUT
+	int "PMU watchdog timeout"
 	default 0
 	help
-	    The 'vddio' type is equal to VDDIO_TYPE_INTERNAL by default and can be overwritten through this compile time flag based on the board design. Valid vddio types:
-	    0 => VDDIO_TYPE_INTERNAL
-	    1 => VDDIO_TYPE_EXTERNAL
-	    Note that the external VDDIO type is determined by the source on the board, which is commonly assumed to be VBAT. Therefore, it is supported for battery level greater than 1.8V.
-
-config BATT_LEVEL
-	int "Battery level"
-	default 1
-	help
-	    The battery level is specified through OTP and is equal to BATT_LEVEL_GT_1P8V by default. It can be overwritten through this compile time flag. Valid battery levels:
-	    0 => BATT_LEVEL_LE_1P8V (<= 1.8V)
-	    1 => BATT_LEVEL_GT_1P8V (> 1.8V)
-
-
-# Energy harvesting configuration
-config VSTORE_MAX
-	int "Vstore maximum"
-	default 3300
-	help
-	    The vstore max is specified through OTP. It can be overwritten through this compile time flag. Suppported Vstore max values:
-	    - Between 1500 mV - 3000 mV with 50 mV step,
-	    - 3100 mV
-	    - 3300 mV (default)
-
-config NONRF_HARV
-	bool "Enable PV harvesting"
-	default n
-	help
-	    Enables PhotoVoltaic (PV) harvesting. Can be specified with RF_HARV to enable combined harvesting.
-
-config VHARV_RANGE
-	int "VHARV range"
-	default 16
-	depends on NONRF_HARV || HARV_METER
-	help
-	    Harvesting range needs to be specified for PV harvesting. It can be done at compile time using this flag. Valid vharv range values:
-	    0 => VHARV_RANGE_0P4V_0P45V
-	    1 => VHARV_RANGE_0P45V_0P5V
-	    2 => VHARV_RANGE_0P525V_0P6V
-	    3 => VHARV_RANGE_0P6V_0P7V
-	    4 => VHARV_RANGE_0P675V_0P8V
-	    5 => VHARV_RANGE_0P75V_0P9V
-	    6 => VHARV_RANGE_0P825V_1P0V
-	    7 => VHARV_RANGE_0P9V_1P1V
-	    8 => VHARV_RANGE_0P975V_1P2V
-	    9 => VHARV_RANGE_1P05V_1P3V
-	    10 => VHARV_RANGE_1P175V_1P45V
-	    11 => VHARV_RANGE_1P3V_1P6V
-	    12 => VHARV_RANGE_1P5V_1P8V
-	    13 => VHARV_RANGE_1P7V_2P0V
-	    14 => VHARV_RANGE_1P95V_2P25V
-	    15 => VHARV_RANGE_2P2V_2P5V
-
-config RF_HARV
-	bool "Enable RF harvesting"
-	default n
-	help
-	    Enables RF harvesting. Can be specified with NONRF_HARV to enable combined harvesting.
-
-config BOOST_FROM_VHARV_INDUCTOR
-	bool "Enable charging from VHARV to VBATLI through external inductive boosting circuit"
-	default n
-	depends on BATT_TYPE = 0 && NONRF_HARV
-	help
-	    This option is only available with BATT_TYPE=BATT_TYPE_LI_ION, and PV harvesting (CFG_NONRF_HARV and corresponding VHARV_RANGE option). Please refer to the application notes for the applicable scenarios, hardware connections and performance. Based on the characteristic of the selected PV cell, the user needs to choose the upper level or lower level of the VHARV_RANGE by enabling one of the 2 flags: VHARV_LL or VHARV_UL
-
-config VHARV_LL
-	bool "VHARV LL"
-	default n
-	depends on BOOST_FROM_VHARV_INDUCTOR
-	help
-	    VHARV range lower level
-
-config VHARV_UL
-	bool "VHARV UL"
-	default n
-	depends on BOOST_FROM_VHARV_INDUCTOR
-	help
-	    VHARV range upper level
-
-config BOOST_FROM_VHARV_TWO_DIODE
-	bool "Enable charging from VHARV to VBATLI through external 2-diode boosting circuit"
-	default n
-	depends on BATT_TYPE = 0 && NONRF_HARV
-	help
-	    This option is only available with BATT_TYPE=BATT_TYPE_LI_ION, and PV harvesting (CFG_NONRF_HARV and corresponding VHARV_RANGE option). Please refer to the application notes for the applicable scenarios, hardware connections and performance.
-
-config HARV_METER
-	bool "Enable harvesting meter"
-	default n
-	help
-	    Supported only when MPPT is disabled. The application needs to call the pmu_set_harv_meter() API to start/stop the meter. The instantaneous power computation depends on the vharv range and the inductor used.
-
-config INDUCTOR_NHENRY
-	int "Inductor value in nano henries"
-	default 3300
-	depends on HARV_METER
-	help
-	    Inductor being used in the board design for harvesting meter
+	   A value of 0 implies 1 sec.
+	   A value of 1 implies 32 sec.

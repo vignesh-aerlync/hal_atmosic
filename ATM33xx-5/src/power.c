@@ -68,9 +68,9 @@ static void atm_power_mode_retain(uint32_t idle, uint32_t *int_set)
 	}
 
 	static uint32_t __noinit_named(ssrs_block) ssrs_block[PSEQ_SYSRAM_SSRS_BLOCK_SIZE];
-	// Retain all used RAM
-	uint32_t block_sysram = RAM_BANK2MASK(RAM_ADDR2BANK((uintptr_t)_image_ram_end - 1));
-	pseq_core_config_retain(duration, block_sysram, ssrs_block, false, false);
+	// Retain all RAM
+	uint32_t block_sysram = ~0;
+	pseq_core_config_retain(duration, block_sysram, (uintptr_t)ssrs_block, false, false);
 
 #ifdef FIXME_UART_GLITCH
 #define PIN_UART0_TX_REG CMSDK_WRPR0_NONSECURE->PIN2REG(PIN_UART0_TX)
@@ -100,7 +100,7 @@ static void atm_power_mode_hibernate(uint32_t idle, uint32_t *int_set)
 		duration = 0;
 	}
 
-	uint32_t wake_mask = pseq_core_config_hibernate(duration, false, false);
+	__UNUSED uint32_t wake_mask = pseq_core_config_hibernate(duration, false, false);
 
 #ifdef DEBUG_HIBERNATE
 	printk("Hibernate duration %" PRId32 ", ise 0x%08" PRIx32 "_%08" PRIx32 "_%08" PRIx32
@@ -333,6 +333,12 @@ void atm_pseq_soc_off(uint32_t ticks)
 	atm_power_pseq_setup(atm_power_mode_soc_off, ticks);
 }
 
+void atm_pseq_hibernate(uint32_t ticks)
+{
+	__disable_irq();
+	atm_power_pseq_setup(atm_power_mode_hibernate, ticks);
+}
+
 #endif /* CONFIG_PM */
 
 #ifdef SECURE_PROC_ENV
@@ -354,14 +360,7 @@ static int atm_power_init(void)
 {
 	WRPR_CTRL_PUSH(CMSDK_PSEQ, WRPR_CTRL__CLK_ENABLE)
 	{
-#ifdef CONFIG_PM
-		// Shut off memory that is not used
-		uint32_t used_sysram = RAM_BANK2MASK(RAM_ADDR2BANK((uintptr_t)_image_ram_end - 1));
-		pseq_core_power_off_sysram(~used_sysram);
-#else
 		pseq_core_power_all_sysram();
-#endif /* CONFIG_PM */
-
 		pseq_core_xtal_init();
 
 #ifdef CONFIG_PM

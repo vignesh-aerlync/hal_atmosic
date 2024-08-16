@@ -25,48 +25,65 @@
 #include "atm_bp_clock.h"
 #define PMU_INTERNAL_GUARD
 #include "pmu_internal.h"
-
-#ifndef CONFIG_SOC_FAMILY_ATM
 #include "pinmux.h"
+
+#ifdef CONFIG_SOC_FAMILY_ATM
+#define DT_DRV_COMPAT atmosic_atmx3_pmu
+
+#if DT_NODE_HAS_PROP(DT_NODELABEL(pmu), vddio_type)
+#define VDDIO_TYPE DT_PROP(DT_NODELABEL(pmu), vddio_type)
 #endif
 
-#ifdef CONFIG_VDDIO_TYPE
-#define VDDIO_TYPE CONFIG_VDDIO_TYPE
+#if DT_NODE_HAS_PROP(DT_NODELABEL(pmu), vstore_max)
+#define VSTORE_MAX DT_PROP(DT_NODELABEL(pmu), vstore_max)
 #endif
+
+#if DT_PROP(DT_NODELABEL(pmu), rf_harv)
+#define CFG_RF_HARV
+#endif
+
+#if DT_PROP(DT_NODELABEL(pmu), nonrf_harv)
+#define CFG_NONRF_HARV
+#endif
+
+#if DT_NODE_HAS_PROP(DT_NODELABEL(pmu), vharv_range)
+#define VHARV_RANGE DT_PROP(DT_NODELABEL(pmu), vharv_range)
+#endif
+
+#if DT_PROP(DT_NODELABEL(pmu), vharv_ll)
+#define VHARV_LL
+#endif
+
+#if DT_PROP(DT_NODELABEL(pmu), vharv_ul)
+#define VHARV_UL
+#endif
+
+#if DT_NODE_HAS_PROP(DT_NODELABEL(pmu), dig_test_out_pin)
+#define PIN_PMU_DIG_TEST_OUT DT_PROP(DT_NODELABEL(pmu), dig_test_out_pin)
+#endif
+
+#if DT_NODE_HAS_PROP(DT_NODELABEL(pmu), boost_io_pin)
+#define PIN_BOOSTER_IO DT_PROP(DT_NODELABEL(pmu), boost_io_pin)
+#endif
+
+#if DT_PROP(DT_NODELABEL(pmu), harv_meter)
+#define CFG_HARV_METER
+#endif
+
+#if DT_NODE_HAS_PROP(DT_NODELABEL(pmu), inductor_nhenry)
+#define INDUCTOR_NHENRY DT_PROP(DT_NODELABEL(pmu), inductor_nhenry)
+#endif
+#endif // CONFIG_SOC_FAMILY_ATM
+
 #ifndef VDDIO_TYPE
 #define VDDIO_TYPE VDDIO_TYPE_INTERNAL
 #endif
 
-#ifdef CONFIG_VSTORE_MAX
-#define VSTORE_MAX CONFIG_VSTORE_MAX
-#endif
 #ifndef VSTORE_MAX
 #define VSTORE_MAX 3300
 #endif
 
-#ifdef CONFIG_NONRF_HARV
-#define CFG_NONRF_HARV
-#endif
-
-#ifdef CONFIG_VHARV_RANGE
-#define VHARV_RANGE CONFIG_VHARV_RANGE
-#endif
-
-#ifdef CONFIG_BOOST_FROM_VHARV_INDUCTOR
-#define BOOST_FROM_VHARV_INDUCTOR CONFIG_BOOST_FROM_VHARV_INDUCTOR
-#endif
-
-#ifdef CONFIG_BOOST_FROM_VHARV_TWO_DIODE
-#define BOOST_FROM_VHARV_TWO_DIODE CONFIG_BOOST_FROM_VHARV_TWO_DIODE
-#endif
-
 #ifdef BOOST_FROM_VHARV_INDUCTOR
-#ifdef CONFIG_VHARV_UL
-#define VHARV_UL CONFIG_VHARV_UL
-#endif
-#ifdef CONFIG_VHARV_LL
-#define VHARV_UL CONFIG_VHARV_LL
-#endif
 #ifdef VHARV_LL
 #define DIG_TEST_SEL 21
 #elif defined(VHARV_UL)
@@ -76,23 +93,19 @@
 #endif // VHARV_LL || VHARV_UL
 #endif // BOOST_FROM_VHARV_INDUCTOR
 
-#ifdef CONFIG_HARV_METER
-#define CFG_HARV_METER CONFIG_HARV_METER
-#endif
 #ifdef CFG_HARV_METER
 #ifndef VHARV_RANGE
 #error "VHARV_RANGE needs to be defined for harvesting meter"
 #endif // VHARV_RANGE
 #include "sw_event.h"
 #include "sw_timer.h"
+#include <string.h>
+#include "timer.h"
 #define REF_INDUCTOR_NHENRY 3300
-#ifdef CONFIG_INDUCTOR_NHENRY
-#define INDUCTOR_NHENRY CONFIG_INDUCTOR_NHENRY
-#endif
 #ifndef INDUCTOR_NHENRY
 #define INDUCTOR_NHENRY REF_INDUCTOR_NHENRY
 #endif
-#endif
+#endif // CFG_HARV_METER
 
 STATIC_ASSERT(((VDDIO_TYPE == VDDIO_TYPE_INTERNAL) ||
     (BATT_LEVEL != BATT_LEVEL_LE_1P8V)),
@@ -115,13 +128,7 @@ pmu_back_from_retain_all(void)
 	return (RV_NEXT);
     }
 
-    pmu_update_hm_stats(&hm_stats, &hm_stats_valid);
-    // Duration of 0 implies, send all the updates
-    if (!hm_stats_dur) {
-	sw_event_set(hm_event_id);
-    }
-    pmu_reset_harv_meter();
-
+    sw_event_set(hm_event_id);
     return (RV_NEXT);
 }
 
@@ -135,7 +142,15 @@ static void hm_update_event(sw_event_id_t event_id,
 {
     ASSERT_ERR(event_id == hm_event_id);
     sw_event_clear(hm_event_id);
-    hm_stats_update(&hm_stats, hm_stats_valid);
+
+    pmu_update_hm_stats(&hm_stats, &hm_stats_valid);
+
+    // Duration of 0 implies, send all the updates
+    if (!hm_stats_dur) {
+	hm_stats_update(&hm_stats, hm_stats_valid);
+    }
+
+    pmu_reset_harv_meter();
 }
 #endif
 
@@ -185,13 +200,13 @@ hm_status_t pmu_set_harv_meter(bool enable, harv_meter_cb cb, uint32_t seconds)
 
 void pmu_cfg_dbg_sig(void)
 {
-#ifndef CONFIG_SOC_FAMILY_ATM
+#if (BATT_TYPE == BATT_TYPE_LI_ION)
 #ifdef BOOST_FROM_VHARV_INDUCTOR
     PINMUX_CFG_DBG_SIG(PIN_PMU_DIG_TEST_OUT, PMU_DIG_TEST_OUT);
 #else
     PINMUX_CFG_DBG_SIG(PIN_BOOSTER_IO, CLK_CP);
 #endif
-#endif
+#endif // BATT_TYPE == BATT_TYPE_LI_ION
 }
 
 #ifndef CONFIG_SOC_FAMILY_ATM

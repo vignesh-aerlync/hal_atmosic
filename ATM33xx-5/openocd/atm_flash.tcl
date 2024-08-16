@@ -1422,7 +1422,7 @@ proc atm_dump_flash [list image [list len 0x78000] [list start_addr $::CMSDK_FLA
 proc atm_load_flash { image {region_start 0x0} {region_size 0x78000} {address ""} } {
     reset halt
     enable_spi2
-
+    puts "Loading [file tail $image] into FLASH"
     set region_end [expr {$region_start + $region_size}]
     lassign [atm_discover_flash $region_end] flash size
 

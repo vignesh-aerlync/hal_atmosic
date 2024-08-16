@@ -1,3 +1,7 @@
+# Copyright (c) 2024 Atmosic
+#
+# SPDX-License-Identifier: Apache-2.0
+
 config NO_BROWNOUT
 	bool "Disable brownout support"
 	default y

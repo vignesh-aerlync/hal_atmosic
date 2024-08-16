@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+if BT || ENTROPY_ATM_TRNG
+
 config EXT_WAKEUP_ENABLE
 	int "EXT WAKEUP ENABLE"
 	default 1
@@ -19,16 +21,4 @@ config ATM_SLEEP_ADJ
 	int "Sleep adjustment value"
 	default 10
 
-config USE_ATMWSTK
-	bool "Use fixed BLE stack image"
-	default n
-
-config ATMWSTK
-	string "Fixed BLE stack image flavor"
-	default "LL"
-	depends on USE_ATMWSTK
-
-config ATMWSTKLIB
-	string "BLE link layer library flavor"
-	default "PD50"
-	depends on !USE_ATMWSTK
+endif

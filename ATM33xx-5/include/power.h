@@ -23,7 +23,17 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Move the device to 'SOC off' state for specified duration
+ * @param[in] ticks Duration
+ */
 void atm_pseq_soc_off(uint32_t ticks);
+
+/**
+ * @brief Move the device to 'Hibernate' state for specified duration
+ * @param[in] ticks Duration
+ */
+void atm_pseq_hibernate(uint32_t ticks);
 
 #ifdef __cplusplus
 }

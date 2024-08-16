@@ -88,10 +88,6 @@ static bool brwnout_stat;
 static bool brwnout_disabled;
 #ifndef CONFIG_SOC_FAMILY_ATM
 static sw_event_id_t brwnout_event_id;
-#else
-K_THREAD_STACK_DEFINE(brwnout_thread_stack, CONFIG_BROWNOUT_STACK_SIZE);
-struct k_thread brwnout_thread_data;
-K_SEM_DEFINE(brwnout_sem, 0, 1);
 #endif
 #if (BATT_TYPE == BATT_TYPE_LI_ION)
 static uint32_t brwnout_check_ts;
@@ -142,13 +138,12 @@ static void brwnout_plf_off_async(sw_event_id_t event_id,
     brwnout_plf_off();
 }
 #else
-static void brwnout_thread_function(void *arg1, void *arg2, void *arg3)
+static void brwnout_plf_off_async(struct k_work *work)
 {
-    for (;;) {
-	k_sem_take(&brwnout_sem, K_FOREVER);
-	brwnout_plf_off();
-    }
+    brwnout_plf_off();
 }
+
+K_WORK_DEFINE(brwnout_event, brwnout_plf_off_async);
 #endif
 
 #if (BATT_TYPE == BATT_TYPE_LI_ION)
@@ -214,7 +209,7 @@ __FAST void PMU_Handler(void)
     // Allow any interrupted operation to finish before soc off
     sw_event_set(brwnout_event_id);
 #else
-    k_sem_give(&brwnout_sem);
+    k_work_submit(&brwnout_event);
 #endif
 }
 
@@ -251,11 +246,6 @@ static rep_vec_err_t brwnout_appm_init(void)
 {
 #ifndef CONFIG_SOC_FAMILY_ATM
     brwnout_event_id = sw_event_alloc(brwnout_plf_off_async, NULL);
-#else
-    __UNUSED k_tid_t my_tid = k_thread_create(&brwnout_thread_data,
-	brwnout_thread_stack, K_THREAD_STACK_SIZEOF(brwnout_thread_stack),
-	brwnout_thread_function, NULL, NULL, NULL,
-	CONFIG_BROWNOUT_THREAD_PRIORITY, 0, K_NO_WAIT);
 #endif
 
 #if (BATT_TYPE == BATT_TYPE_LI_ION)

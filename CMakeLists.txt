@@ -5,5 +5,6 @@
 if (CONFIG_SOC_FAMILY_ATM)
 
 add_subdirectory(${CONFIG_SOC})
+add_subdirectory(lib)
 
 endif ()

@@ -2,11 +2,4 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-rsource "pmu/Kconfig"
-rsource "brwnout/Kconfig"
-
-if BT || ENTROPY_ATM_TRNG
-
-rsource "ble/Kconfig"
-
-endif
+rsource "*/Kconfig"
