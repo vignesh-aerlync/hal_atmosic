@@ -18,7 +18,7 @@
 #error "sec_reset is a secure-only driver"
 #endif
 
-#ifdef MCUBOOT
+#if (defined(MCUBOOT) || defined(CONFIG_MCUBOOT))
 #include "at_wrpr.h"
 #include "at_apb_pseq_regs_core_macro.h"
 #include "pseq_status.h"
@@ -36,7 +36,7 @@ static uint32_t get_and_clear_reset_syndrome(bool clear)
     return reset_syndrome_check;
 }
 
-#ifdef MCUBOOT
+#if (defined(MCUBOOT) || defined(CONFIG_MCUBOOT))
 
 #define PSEQ_STATUS_TRIGGER_ALLOW_MASK \
     (PSEQ_STATUS__TIMER_TRIGGERED__MASK | PSEQ_STATUS__GPIO_TRIGGERED__MASK | \

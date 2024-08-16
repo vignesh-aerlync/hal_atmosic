@@ -7,7 +7,6 @@ zephyr_include_directories(
 )
 zephyr_sources(
     atm_vendor.c
-    atm_hci_uart.c
 )
 
 zephyr_compile_definitions_ifdef(CONFIG_VND_DBG_MMR CFG_VND_DBG_MMR)

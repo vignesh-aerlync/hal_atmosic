@@ -2,12 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-if SOC_ATM33xx_5
-
-rsource "ATM33xx-5/drivers/Kconfig"
-rsource "ATM33xx-5/lib/Kconfig"
-
-endif # SOC_ATM33xx_5
+rsource "*/drivers/Kconfig"
+rsource "*/lib/Kconfig"
 
 rsource "tools/Kconfig"
 

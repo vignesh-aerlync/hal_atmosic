@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-#ifdef MCUBOOT
+#if (defined(MCUBOOT) || defined(CONFIG_MCUBOOT))
 
 typedef enum {
     SECURE_RESET_TYPE_UNKNOWN,

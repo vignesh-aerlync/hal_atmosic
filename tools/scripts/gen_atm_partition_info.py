@@ -127,8 +127,11 @@ class AtmPartInfo:
         NS_APP_SIZE = None
         OTA_STAGING_START = None
         OTA_STAGING_SIZE = None
+        # For tool compatibility, this is named NVDS instead of NVS.
         NVDS_START = None
         NVDS_SIZE = None
+        FACTORY_DATA_START = None
+        FACTORY_DATA_SIZE = None
         USER_DATA_START = None
         USER_DATA_SIZE = None
         SEC_JRNL_START = None
@@ -159,6 +162,7 @@ class AtmPartInfo:
         BOARD = None
         PLATFORM_NAME = None
         PLATFORM_FAMILY = None
+        ERASE_BLOCK_SIZE = None
 
 
 class PartInfoMerge:
@@ -317,6 +321,16 @@ class DevStreeParser:
                                     f"nspe_size = {hex(nspe_size)}")
                     self.part_info.NS_APP_START = hex(nspe_start + rram_start)
                     self.part_info.NS_APP_SIZE = hex(nspe_size)
+            # ATMWSTK from fast_code_partition
+            fast_code_partition = utils_get_node_by_lable(rram0, "fast_code_partition")
+            if fast_code_partition:
+                ret, atmwstk_start, atmwstk_size = \
+                        utils_get_node_property_reg(fast_code_partition)
+                if ret == ST_PASS:
+                    self.debug_print(f"atmwstk_start = {hex(atmwstk_start)}, "
+                                    f"atmwstk_size = {hex(atmwstk_size)}")
+                    self.part_info.ATMWSTK_START = hex(atmwstk_start + rram_start)
+                    self.part_info.ATMWSTK_SIZE = hex(atmwstk_size)
         else:
             print("to do")
 
@@ -417,7 +431,7 @@ class DevStreeParser:
             self.parsing_not_use_mcuboot(rram0, rram0_start, rram0_size)
         else:
             self.parsing_use_mcuboot(rram0, rram0_start, rram0_size)
-        # NVDS from storage_partition
+        # settings data from storage_partition
         storage_partition = utils_get_node_by_lable(rram0, "storage_partition")
         if storage_partition:
             ret, nvds_start, nvds_size = \
@@ -429,7 +443,22 @@ class DevStreeParser:
                              f"nvds_size = {hex(nvds_size)}")
             self.part_info.NVDS_START = hex(nvds_start + rram0_start)
             self.part_info.NVDS_SIZE = hex(nvds_size)
-
+        # factory data from factory_partition
+        factory_data_partition = utils_get_node_by_lable(rram0, "factory_partition")
+        if factory_data_partition:
+            ret, factory_data_start, factory_data_size = \
+                    utils_get_node_property_reg(factory_data_partition)
+            if ret == ST_ERROR:
+                print("Parsing rram factory data failed")
+                return
+            self.debug_print(f"factory_data_start = {hex(factory_data_start)}, "
+                             f"factory_data_size = {hex(factory_data_size)}")
+            self.part_info.FACTORY_DATA_START = hex(factory_data_start + rram0_start)
+            self.part_info.FACTORY_DATA_SIZE = hex(factory_data_size)
+        # erase block size from erase-block-size
+        erase_block_size = rram0.props.get('erase-block-size', 'Not found')
+        if erase_block_size:
+            self.part_info.ERASE_BLOCK_SIZE = hex(dtlib.to_nums(erase_block_size.value)[0])
         # partition info from input arguments
         if self.user_data_offset:
             self.part_info.USER_DATA_START = \
@@ -551,7 +580,7 @@ class DevStreeParser:
                 self.part_info.OTA_STAGING_START = \
                         hex(ota_staging_start + flash0_start)
                 self.part_info.OTA_STAGING_SIZE = hex(ota_staging_size)
-        # NVDS from storage_partition
+        # settings data from storage_partition
         storage_partition = utils_get_node_by_lable(flash0, "storage_partition")
         if storage_partition:
             ret, nvds_start, nvds_size = \
@@ -563,7 +592,22 @@ class DevStreeParser:
                              f"nvds_size = {hex(nvds_size)}")
             self.part_info.NVDS_START = hex(nvds_start + flash0_start)
             self.part_info.NVDS_SIZE = hex(nvds_size)
-
+        # factory data from factory_partition
+        factory_data_partition = utils_get_node_by_lable(flash0, "factory_partition")
+        if factory_data_partition:
+            ret, factory_data_start, factory_data_size = \
+                    utils_get_node_property_reg(factory_data_partition)
+            if ret == ST_ERROR:
+                print("Parsing flash factory data failed")
+                return
+            self.debug_print(f"factory_data_start = {hex(factory_data_start)}, "
+                             f"factory_data_size = {hex(factory_data_size)}")
+            self.part_info.FACTORY_DATA_START = hex(factory_data_start + flash0_start)
+            self.part_info.FACTORY_DATA_SIZE = hex(factory_data_size)
+        # erase block size from erase-block-size
+        erase_block_size = flash0.props.get('erase-block-size', 'Not found')
+        if erase_block_size:
+            self.part_info.ERASE_BLOCK_SIZE = hex(dtlib.to_nums(erase_block_size.value)[0])
 
     def parsing_sec_jrnl_and_key(self):
         sec_jrnl = utils_get_node_by_lable(self.dt, "sec_jrnl")

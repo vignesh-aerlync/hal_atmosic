@@ -67,6 +67,9 @@ def get_atm_openocd():
         plat = platform.system()
         if plat.startswith('MSYS'):
             plat = 'Windows'
+        elif plat == 'Darwin':
+            arch = platform.machine().lower()
+            plat = f'Darwin/{arch}'
         openocd = os.path.join(atm_openocd_base, 'bin', plat, 'openocd')
         openocd_search = os.path.join(atm_openocd_base, 'tcl')
         print("Using ATM OpenOCD '{}'".format(openocd))

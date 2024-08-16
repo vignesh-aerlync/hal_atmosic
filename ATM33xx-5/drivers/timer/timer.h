@@ -177,6 +177,24 @@ __INLINE uint32_t atm_get_sys_time(void)
  */
 __attribute__((weak)) uint32_t lpc_rcos_hz(void);
 
+/*
+ * Repeat an operation for a finite period of time.
+ * Macros mimic do/while syntax:
+ *
+ * ATM_TIMER_DO {
+ *     ...;
+ * } ATM_TIMER_WHILE_LPC_DELAY(ticks);
+ */
+#define ATM_TIMER_DO \
+    do { \
+	uint32_t then = atm_get_sys_time(); \
+	do {
+
+#define ATM_TIMER_WHILE_LPC_DELAY(ticks) \
+	    YIELD(); \
+	} while (atm_get_sys_time() - then < (ticks)); \
+    } while (0)
+
 /**
  * @brief Busy wait using CMSDK_PSEQ->CURRENT_REAL_TIME.
  * @param[in] ticks Delay value in counts of CMSDK_PSEQ->CURRENT_REAL_TIME.

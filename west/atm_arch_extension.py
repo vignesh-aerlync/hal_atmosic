@@ -11,6 +11,7 @@ import argparse
 import os
 from pathlib import Path
 import sys
+import ast
 from west.commands import WestCommand
 
 ROOT_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
@@ -23,6 +24,7 @@ TYPE_APP = 2
 TYPE_MCUBOOT = 3
 TYPE_ATMWSTK = 4
 TYPE_EXTRA_FILE = 5
+TYPE_FACTORY_DATA = 6
 
 ARCH_USAGE = ''' \
 west atmarch [-h] [-i {input file name} | --append] [-s] [-d]
@@ -30,6 +32,7 @@ west atmarch [-h] [-i {input file name} | --append] [-s] [-d]
            [-p {partition_info map file}]
            [--atm_isp_path {atm_isp exe file}]
            [--nvds_file {nvds file}]
+           [--factory_data_file {factory data file}]
            [--spe_file {spe file}]
            [--app_file {app file}]
            [--mcuboot_file {mcuboot file}]
@@ -95,14 +98,6 @@ class AtmIsp:
         return self.exe_cmd(cmd_arg)
 
     def append(self, load_type, filepath, input_file, output_file):
-        if hasattr(self.partInfo, 'PLATFORM_FAMILY') and \
-                self.partInfo.PLATFORM_FAMILY == 'atmx2':
-            return self.add_flash(load_type, filepath, input_file, output_file)
-        else:
-            return self.add_rram(load_type, filepath, input_file, output_file)
-
-    def add_rram(self, load_type, filepath, input_file, output_file):
-        base_addr = hex(BASE_ADDR)
         if load_type == TYPE_NVDS:
             if not self.partInfo.NVDS_START or not self.partInfo.NVDS_SIZE:
                 print(f"Cannot find NVDS_START and NVDS_SIZE info")
@@ -110,6 +105,15 @@ class AtmIsp:
             region_start = self.partInfo.NVDS_START
             region_size = self.partInfo.NVDS_SIZE
             extra_info = 'NVDS'
+        elif load_type == TYPE_FACTORY_DATA:
+            if not self.partInfo.FACTORY_DATA_START or \
+                not self.partInfo.FACTORY_DATA_SIZE:
+                print(f"Cannot find FACTORY_DATA_START and FACTORY_DATA_SIZE"
+                       "info")
+                sys.exit(1)
+            region_start = self.partInfo.FACTORY_DATA_START
+            region_size = self.partInfo.FACTORY_DATA_SIZE
+            extra_info = 'FACTORY_DATA'
         elif load_type == TYPE_SPE:
             if not self.partInfo.SPE_START or \
                     not self.partInfo.SPE_SIZE:
@@ -155,55 +159,44 @@ class AtmIsp:
         else:
             print(f"Unknown type {load_type}")
             sys.exit(1)
-        # atm_isp loadRram [-h] [-i ARCHIVE] [-o NEW_ARCHIVE] [-v]
-        #                 [-mpr_start MPR_START] [-mpr_size MPR_SIZE]
-        #                 [-mpr_lock_size MPR_LOCK_SIZE] [-extrainfo EXTRAINFO]
-        #                 image [region_start] [region_size] [address]
-        cmd_arg = [self.atm_isp_exe_path, 'loadRram', '-i', input_file,
-                   '-o', output_file, '-extrainfo', extra_info]
-        cmd_arg.append(filepath)
-        cmd_arg.append(region_start)
-        cmd_arg.append(region_size)
-        cmd_arg.append(base_addr)
-        return self.exe_cmd(cmd_arg)
-
-    def add_flash(self, load_type, filepath, input_file, output_file):
-        if load_type == TYPE_NVDS:
-            if not self.partInfo.NVDS_START or not self.partInfo.NVDS_SIZE:
-                print(f"Cannot find NVDS_START and NVDS_SIZE info")
-                sys.exit(1)
-            region_start = self.partInfo.NVDS_START
-            region_size = self.partInfo.NVDS_SIZE
-            extra_info = 'NVDS'
-        elif load_type == TYPE_APP:
-            extra_info = 'SIGNED_APP'
-            if not self.partInfo.PRIMARY_IMG_START or \
-                    not self.partInfo.PRIMARY_IMG_SIZE:
-                print(f"Cannot find PRIMARY_IMG_START and "
-                        "PRIMARY_IMG_SIZE info")
-                sys.exit(1)
-            region_start = self.partInfo.PRIMARY_IMG_START
-            region_size = self.partInfo.PRIMARY_IMG_SIZE
-        elif load_type == TYPE_MCUBOOT:
-            if not self.partInfo.MCUBOOT_START or \
-                    not self.partInfo.MCUBOOT_SIZE:
-                print(f"Cannot find MCUBOOT_START and MCUBOOT_SIZE info")
-                sys.exit(1)
-            region_start = self.partInfo.MCUBOOT_START
-            region_size = self.partInfo.MCUBOOT_SIZE
-            extra_info = 'MCUBOOT'
+        if hasattr(self.partInfo, 'RRAM_START'):
+            rram_start = ast.literal_eval(self.partInfo.RRAM_START)
+            rram_size = ast.literal_eval(self.partInfo.RRAM_SIZE)
         else:
-            print(f"Unknown type {load_type}")
-            sys.exit(1)
-        # atm_isp loadFlashNvds [-h] [-i ARCHIVE] [-o NEW_ARCHIVE] [-v]
-        #                 [-mpr_start MPR_START] [-mpr_size MPR_SIZE]
-        #                 [-mpr_lock_size MPR_LOCK_SIZE] [-extrainfo EXTRAINFO]
-        #                 image [region_start] [region_size] [address]
-        cmd_arg = [self.atm_isp_exe_path, 'loadFlashNvds', '-i', input_file,
-                   '-o', output_file, '-extrainfo', extra_info]
-        cmd_arg.append(filepath)
-        cmd_arg.append(region_start)
-        cmd_arg.append(region_size)
+            rram_size = 0
+        if hasattr(self.partInfo, 'EXT_FLASH_START'):
+            ext_flash_start = ast.literal_eval(self.partInfo.EXT_FLASH_START)
+            ext_flash_size = ast.literal_eval(self.partInfo.EXT_FLASH_SIZE)
+        else:
+            ext_flash_size = 0
+        if rram_size and ast.literal_eval(region_start) >= rram_start and \
+                ast.literal_eval(region_start) < rram_start + rram_size:
+            # atm_isp loadRram [-h] [-i ARCHIVE] [-o NEW_ARCHIVE] [-v]
+            #                 [-mpr_start MPR_START] [-mpr_size MPR_SIZE]
+            #                 [-mpr_lock_size MPR_LOCK_SIZE] [-extrainfo EXTRAINFO]
+            #                 image [region_start] [region_size] [address]
+            cmd_arg = [self.atm_isp_exe_path, 'loadRram', '-i', input_file,
+                       '-o', output_file, '-extrainfo', extra_info]
+            cmd_arg.append(filepath)
+            cmd_arg.append(region_start)
+            cmd_arg.append(region_size)
+            cmd_arg.append(hex(BASE_ADDR))
+        else:
+            if ext_flash_size and \
+                    ast.literal_eval(region_start) >= ext_flash_start and \
+                    ast.literal_eval(region_start) < ext_flash_start + \
+                    ext_flash_size:
+                region_start = \
+                    hex(ast.literal_eval(region_start) - ext_flash_start)
+            # atm_isp loadFlashNvds [-h] [-i ARCHIVE] [-o NEW_ARCHIVE] [-v]
+            #                 [-mpr_start MPR_START] [-mpr_size MPR_SIZE]
+            #                 [-mpr_lock_size MPR_LOCK_SIZE] [-extrainfo EXTRAINFO]
+            #                 image [region_start] [region_size] [address]
+            cmd_arg = [self.atm_isp_exe_path, 'loadFlashNvds', '-i', input_file,
+                       '-o', output_file, '-extrainfo', extra_info]
+            cmd_arg.append(filepath)
+            cmd_arg.append(region_start)
+            cmd_arg.append(region_size)
         return self.exe_cmd(cmd_arg)
 
     def add_extra(self, filepath, input_file, output_file):
@@ -265,6 +258,9 @@ class AtmArchCommand(WestCommand):
         group.add_argument("-nvds_file", "--nvds_file",
                         required=False, default=None,
                         help="nvds file path")
+        group.add_argument("-factory_data_file", "--factory_data_file",
+                        required=False, default=None,
+                        help="factory data file path")
         group.add_argument("-spe_file", "--spe_file",
                         required=False, default=None,
                         help="spe file path")
@@ -350,6 +346,12 @@ class AtmArchCommand(WestCommand):
                 sys.exit(1)
 
             atmisp.append(TYPE_NVDS, args.nvds_file, input_file,
+                            args.output_atm_file)
+        if args.factory_data_file:
+            if not os.path.exists(args.factory_data_file):
+                print(f"{args.factory_data_file} not exist")
+                sys.exit(1)
+            atmisp.append(TYPE_FACTORY_DATA, args.factory_data_file, input_file,
                             args.output_atm_file)
         if args.spe_file:
             if not os.path.exists(args.spe_file):

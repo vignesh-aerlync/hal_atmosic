@@ -9,12 +9,6 @@ zephyr_include_directories(
     include/reg
 )
 
-if (CONFIG_ATM_ENABLE_NSC_EXAMPLE)
-    zephyr_include_directories(
-	examples/spe/src/cust_sec_func
-    )
-endif()
-
 add_subdirectory(lib)
 add_subdirectory(drivers)
 

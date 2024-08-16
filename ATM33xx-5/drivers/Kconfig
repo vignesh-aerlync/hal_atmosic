@@ -2,27 +2,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+if SOC_ATM33xx_5
 
-config ATM_AES_HW
-	bool "Hardware accelerator for AES"
-	default y
-	depends on MBEDTLS_CIPHER_AES_ENABLED && !USERSPACE
-	select MBEDTLS_USER_CONFIG_ENABLE
-
-config ATM_SHA2_HW
-	bool "Hardware accelerator for SHA256 hash"
-	default n
-	depends on MBEDTLS_HASH_SHA256_ENABLED && !USERSPACE
-	select MBEDTLS_USER_CONFIG_ENABLE
-
-config ATM_SHA2_HW_BOOTUTIL
-	bool "Hardware accelerator for SHA256 hash supporting bootutil API (only used by MCUBOOT)"
-	default n
-
-config ATM_UECC
-	bool "Optimized ECC library"
-	default n
-	depends on MBEDTLS_ECDSA_C
+rsource "*/Kconfig"
 
 config MBEDTLS_USER_CONFIG_FILE
 	default "atm33-mbedtls-config.h" if ATM_AES_HW || ATM_SHA2_HW || ATM_UECC
+
+endif # SOC_ATM33xx_5

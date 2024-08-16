@@ -5,10 +5,16 @@
  *
  * @brief Wrapper for atm_bp_clock related functions
  *
- * Copyright (C) Atmosic 2023
+ * Copyright (C) Atmosic 2023-2024
  *
  *******************************************************************************
  */
+
+#ifdef CONFIG_SOC_FAMILY_ATM
+#include <zephyr/kernel.h>
+#include <soc.h>
+#include <zephyr/init.h>
+#endif
 
 #include <stdint.h>
 #include <inttypes.h>
@@ -75,9 +81,21 @@ bool atm_bp_clock_critical_section_allowed(uint32_t freq)
 }
 
 #if PLF_DEBUG
+#ifndef CONFIG_SOC_FAMILY_ATM
 __CONSTRUCTOR_PRIO(CONSTRUCTOR_USER_INIT)
+#endif
 static void atm_bp_clock_constructor(void)
 {
     atm_bp_clock_max_freq = at_clkrstgen_get_bp();
 }
+
+#ifdef CONFIG_SOC_FAMILY_ATM
+static int atm_bp_clock_sys_init(void)
+{
+    atm_bp_clock_constructor();
+    return 0;
+}
+
+SYS_INIT(atm_bp_clock_sys_init, PRE_KERNEL_2, 9);
+#endif
 #endif
