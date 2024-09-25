@@ -26,6 +26,7 @@ extern "C" {
 /// Secure Journal start address
 #define CMSDK_SEC_JOURNAL_BASE 0x1008f800
 #ifndef SEC_JOURNAL_BASE
+#include "compiler.h"
 #define SEC_JOURNAL_BASE  CMSDK_SEC_JOURNAL_BASE
 #endif
 /// Secure Journal journal size
